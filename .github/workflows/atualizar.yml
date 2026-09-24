@@ -1,0 +1,45 @@
+name: Atualizar painel
+
+on:
+  schedule:
+    - cron: '0 10 * * *'   # todo dia às 7h de Brasília
+  workflow_dispatch:        # botão "Run workflow" pra atualizar na hora
+
+permissions:
+  contents: write
+
+concurrency:
+  group: painel
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    env:
+      PAINEL_SENHA: ${{ secrets.PAINEL_SENHA }}
+      STATICRYPT_SALT: ${{ secrets.STATICRYPT_SALT }}
+      GA4_CREDENTIALS: ${{ secrets.GA4_CREDENTIALS }}
+      SYMPLA_TOKEN: ${{ secrets.SYMPLA_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - name: Abrir template e dados
+        run: |
+          node scripts/cofre.mjs dec src/template.html.enc src/template.html
+          node scripts/cofre.mjs dec data/dados.json.enc data/dados.json
+      - name: Puxar GA4 e Sympla
+        run: node scripts/fetch.mjs
+      - name: Montar e cifrar a página
+        run: |
+          node scripts/build.mjs
+          node scripts/cofre.mjs enc data/dados.json data/dados.json.enc
+      - name: Publicar
+        run: |
+          git config user.name "painel-t1p"
+          git config user.email "painel-t1p@users.noreply.github.com"
+          git add index.html data/dados.json.enc
+          git commit -m "Atualiza números ($(TZ=America/Sao_Paulo date +'%d/%m %H:%M'))" || echo "sem mudança"
+          git push
