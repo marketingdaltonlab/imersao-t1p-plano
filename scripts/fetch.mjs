@@ -85,12 +85,17 @@ async function sympla() {
   dados.vendas = { total: participantes.length, mentoria, imersao: participantes.length - mentoria, porDia, fonte: 'sympla-api' };
 }
 
+let leu = false;
 for (const [nome, fn] of [['GA4', ga4], ['Sympla', sympla]]) {
-  try { await fn(); }
+  const antes = dados.avisos.length;
+  try { await fn(); if (dados.avisos.length === antes) leu = true; }
   catch (e) { console.error(nome, e.message); dados.avisos.push(`${nome} falhou na leitura de hoje (${e.message}). Os números são da leitura anterior.`); }
 }
-dados.atualizadoEm = new Date().toISOString();
-dados.periodo = { inicio: INICIO, fim: hoje };
+// A data de leitura só muda quando alguma fonte respondeu de verdade.
+if (leu || !dados.atualizadoEm) {
+  dados.atualizadoEm = new Date().toISOString();
+  dados.periodo = { inicio: INICIO, fim: hoje };
+}
 fs.mkdirSync('data', { recursive: true });
 fs.writeFileSync(ARQ, JSON.stringify(dados, null, 2));
 console.log('dados.json atualizado', dados.avisos);
