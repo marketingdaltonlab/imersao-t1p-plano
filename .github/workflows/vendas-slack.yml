@@ -1,0 +1,34 @@
+name: Aviso de vendas no Slack
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # a cada 5 minutos (o GitHub pode atrasar alguns minutos)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vendas-slack
+  cancel-in-progress: false
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    env:
+      SYMPLA_TOKEN: ${{ secrets.SYMPLA_TOKEN }}
+      SLACK_WEBHOOK_VENDAS: ${{ secrets.SLACK_WEBHOOK_VENDAS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/aviso-vendas.mjs
+      - name: Guardar pedidos já avisados
+        if: always()
+        run: |
+          git config user.name "painel-t1p"
+          git config user.email "painel-t1p@users.noreply.github.com"
+          git add data/vendas-avisadas.txt
+          git commit -m "Vendas avisadas ($(TZ=America/Sao_Paulo date +'%d/%m %H:%M'))" || exit 0
+          for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done
