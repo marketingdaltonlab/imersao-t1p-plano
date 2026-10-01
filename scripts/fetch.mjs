@@ -63,7 +63,7 @@ async function sympla() {
   const get = async (rota) => {
     const itens = [];
     for (let page = 1; page < 100; page++) {
-      const res = await fetch(`https://api.sympla.com.br/public/v4/events/${SYMPLA_EVENTO}/${rota}?page_size=200&page=${page}`, { headers: { s_token: token } });
+      const res = await fetch(`https://api.sympla.com.br/public/v3/events/${SYMPLA_EVENTO}/${rota}?page_size=200&page=${page}`, { headers: { s_token: token } });
       if (!res.ok) throw new Error(`Sympla ${rota} respondeu ${res.status}`);
       const j = await res.json();
       itens.push(...(j.data || []));
